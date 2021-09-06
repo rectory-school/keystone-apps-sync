@@ -23,6 +23,8 @@
                 "${workspaceFolder}/samples/ksTEACHERS.xml.json",
                 "--course-file",
                 "${workspaceFolder}/samples/ksCOURSES.xml.json",
+                "--families-file",
+                "${workspaceFolder}/samples/ptFAMILIES.xml.json",
             ],
         }
     ]

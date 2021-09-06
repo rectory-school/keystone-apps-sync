@@ -5,7 +5,7 @@
 import argparse
 import logging
 
-from managers import StudentManager, TeacherManager, CourseManager
+from managers import ParentManager, StudentManager, TeacherManager, CourseManager
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,6 +19,7 @@ def main():
     parser.add_argument("--student-file", default="ksPERMRECS.xml.json")
     parser.add_argument("--teacher-file", default="ksTEACHERS.xml.json")
     parser.add_argument("--course-file", default="ksCOURSES.xml.json")
+    parser.add_argument("--families-file", default="psFAMILIES.xml.json")
     parser.add_argument("--api-root", required=True)
     parser.add_argument("--username", required=True)
     parser.add_argument("--password", required=True)
@@ -35,6 +36,8 @@ def main():
     courses = CourseManager(args.api_root, auth=auth, ks_filename=args.course_file)
     courses.sync()
 
+    parents = ParentManager(args.api_root, auth=auth, ks_filename=args.families_file)
+    parents.sync()
 
 if __name__ == "__main__":
     main()

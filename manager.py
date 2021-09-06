@@ -111,7 +111,7 @@ class SyncManager:
 
         for key in to_create:
             desired_record = self.ks_data[key]
-            resp = self.session.post(self.url, data=desired_record)
+            resp = self.session.post(self.url, json=desired_record)
             data = resp.json()
 
             if resp.status_code >= 400 and resp.status_code < 500:
@@ -148,7 +148,7 @@ class SyncManager:
             if should_update(desired_record, current_record):
                 update_count += 1
                 url = current_record["url"]
-                resp = self.session.put(url, data=desired_record)
+                resp = self.session.put(url, json=desired_record)
                 resp.raise_for_status()
                 log.debug("Updated %s", url)
 

@@ -207,17 +207,20 @@ class SectionManager(SyncManager):
     def get_key_value(self, record: Dict[str, Any]) -> Hashable:
         return (record['academic_year'], record['csn'])
 
+
 class DetentionCodeManager(GetOrCreateManager):
     """Get only """
 
     url_key = 'detention_codes'
     key_name = 'code'
 
+
 class DetentionOffenseManager(GetOrCreateManager):
     """Get only """
 
     url_key = 'detention_offenses'
     key_name = 'offense'
+
 
 class DetentionManager(SyncManager):
     url_key = 'detentions'
@@ -254,3 +257,54 @@ class DetentionManager(SyncManager):
             'offense': offense_manager.get_url_for_key,
             'code': code_manager.get_url_for_key,
         }
+
+
+class StudentRegistrationManager(SyncManager):
+    """Student registration manager"""
+
+    url_key = 'student_registrations'
+    key_name = 'student_reg_id'
+
+    def __init__(self, api_root: str,
+                 auth: Tuple[str, str],
+                 ks_filename: str,
+                 academic_year_manager: AcademicYearManager,
+                 section_manager: SectionManager,
+                 student_manager: StudentManager,
+                 ):
+        super().__init__(api_root, auth, ks_filename=ks_filename)
+
+        self.academic_year_manager = academic_year_manager
+        self.section_manager = section_manager
+        self.student_manager = student_manager
+
+    def translate(self, ks_record: Dict[str, Any]) -> Dict[str, Any]:
+        """Overriding translate to get a multi-get section out of academic year and CSN"""
+
+        if not 'IDSTUDENTREG' in ks_record:
+            raise MissingKey(ks_record)
+
+        if not ks_record['IDSTUDENTREG']:
+            raise MissingKeyValue(ks_record)
+
+        section_lookup_record = {
+            'academic_year': self.academic_year_manager.get_url_for_key(ks_record['AcademicYear']),
+            'csn': ks_record['CSN']
+        }
+
+        section_key = self.section_manager.get_key_value(section_lookup_record)
+
+        section = self.section_manager.get_url_for_key(section_key)
+        out = {
+            'student_reg_id': ks_record['IDSTUDENTREG'],
+            'student': self.student_manager.get_url_for_key(ks_record['IDStudent']),
+            'section': section,
+        }
+
+        if not out['student']:
+            raise MissingKeyValue(ks_record)
+        
+        if not out['section']:
+            raise MissingKeyValue(ks_record)
+
+        return out

@@ -23,14 +23,16 @@ class SyncManager:
 
     def __init__(self, api_root: str, auth: Tuple[str, str], ks_filename: str = None):
         self.api_root = api_root
-        self.auth = auth
         self.ks_filename = ks_filename
         self.apps_data = {}
         self.ks_data = {}
 
+        self.session = requests.session()
+        self.session.auth = auth
+
     @cache
     def get_url_map(self) -> Dict[str, str]:
-        resp = requests.get(self.api_root, auth=self.auth)
+        resp = self.session.get(self.api_root)
         resp.raise_for_status()
         return resp.json()
 
@@ -50,7 +52,7 @@ class SyncManager:
         while url:
             log.debug("Loading %s, %d records already loaded", url, len(self.apps_data))
 
-            resp = requests.get(url, auth=self.auth).json()
+            resp = self.session.get(url).json()
             url = resp["next"]
 
             for record in resp["results"]:
@@ -94,7 +96,7 @@ class SyncManager:
             record = self.apps_data[key]
             url = record["url"]
 
-            resp = requests.delete(url, auth=self.auth)
+            resp = self.session.delete(url)
             resp.raise_for_status()
             log.info("Deleted %s", url)
 
@@ -109,7 +111,7 @@ class SyncManager:
 
         for key in to_create:
             desired_record = self.ks_data[key]
-            resp = requests.post(self.url, auth=self.auth, data=desired_record)
+            resp = self.session.post(self.url, data=desired_record)
             data = resp.json()
 
             if resp.status_code >= 400 and resp.status_code < 500:
@@ -120,7 +122,7 @@ class SyncManager:
                     else:                        
                         for error in errors:
                             log.error("Error when creating %s on field %s: '%s'. Original value was '%s'",
-                                      key, attr, error, desired_record[attr])
+                                    key, attr, error, desired_record[attr])
 
                 continue
 
@@ -138,6 +140,7 @@ class SyncManager:
         update_candidates = self.ks_data.keys() & self.apps_data.keys()
         update_count = 0
 
+
         for key in update_candidates:
             current_record = self.apps_data[key]
             desired_record = self.ks_data[key]
@@ -145,7 +148,7 @@ class SyncManager:
             if should_update(desired_record, current_record):
                 update_count += 1
                 url = current_record["url"]
-                resp = requests.put(url, auth=self.auth, data=desired_record)
+                resp = self.session.put(url, data=desired_record)
                 resp.raise_for_status()
                 log.debug("Updated %s", url)
 

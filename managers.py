@@ -9,9 +9,9 @@ log = logging.getLogger(__name__)
 
 
 class StudentManager(SyncManager):
-    apps_url_key = 'students'
-    apps_key = 'student_id'
-    ks_key = 'IDSTUDENT'
+    url_key = 'students'
+    key_name = 'student_id'
+
     field_map = [
         ('student_id', 'IDSTUDENT'),
         ('first_name', 'NameFirst'),
@@ -27,9 +27,8 @@ class StudentManager(SyncManager):
 
 
 class TeacherManager(SyncManager):
-    apps_url_key = 'teachers'
-    apps_key = 'teacher_id'
-    ks_key = 'IDTEACHER'
+    url_key = 'teachers'
+    key_name = 'teacher_id'
 
     field_map = [
         ('teacher_id', 'IDTEACHER'),
@@ -47,9 +46,8 @@ class TeacherManager(SyncManager):
 
 
 class CourseManager(SyncManager):
-    apps_url_key = 'courses'
-    apps_key = 'number'
-    ks_key = 'CourseNumber'
+    url_key = 'courses'
+    key_name = 'number'
 
     field_map = [
         ('number', 'CourseNumber'),
@@ -61,3 +59,6 @@ class CourseManager(SyncManager):
         ('department', 'DepartmentName'),
         ('course_type', 'CourseType'),
     ]
+
+class ParentManager(SyncManager):
+    url_key = 'parents'

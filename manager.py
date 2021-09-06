@@ -1,6 +1,6 @@
 """Base manager"""
 
-from typing import List, Tuple, Dict, Any, Callable
+from typing import Hashable, List, Tuple, Dict, Any, Callable, Iterable
 from functools import cache, wraps
 import logging
 import json
@@ -15,8 +15,8 @@ log = logging.getLogger(__name__)
 
 
 class SyncManager:
-    apps_url_key: str = None
-    apps_key: str = None
+    url_key: str = None
+    key_name: str = None
 
     field_map: List[Tuple[str, str]] = None
     field_translations: Dict[str, Callable[[Any], Any]] = {}
@@ -36,7 +36,7 @@ class SyncManager:
 
     @property
     def url(self) -> str:
-        return self.get_url_map()[self.apps_url_key]
+        return self.get_url_map()[self.url_key]
 
     @run_once
     def load_apps_data(self):
@@ -48,13 +48,14 @@ class SyncManager:
         url = urllib.parse.urlunparse(url_parts)
 
         while url:
-            log.info("Loading %s, %d records already loaded", url, len(self.apps_data))
+            log.debug("Loading %s, %d records already loaded", url, len(self.apps_data))
 
             resp = requests.get(url, auth=self.auth).json()
             url = resp["next"]
 
             for record in resp["results"]:
-                key = record[self.apps_key]
+                key = self.get_key_value(record)
+                
                 self.apps_data[key] = record
 
         log.info("Finished loading from %s, got %d records", self.url, len(self.apps_data))
@@ -66,11 +67,15 @@ class SyncManager:
 
             for i, record in enumerate(data["records"]):
                 try:
-                    translated = self.translate(record)
-                    key = translated[self.apps_key]
-                    self.ks_data[key] = translated
+                    for j, translated in enumerate(self.split(record)):
+                        try:
+                            key = self.get_key_value(translated)
+                        
+                            self.ks_data[key] = translated
+                        except InvalidRecord as exc:
+                            log.error("Unable to load Keystone record %d subrecord %d: %s", i, j, exc.record)
                 except InvalidRecord as exc:
-                    log.error("Unable to load Keystone record %d: %s", i, exc)
+                    log.error("Unable to load Keystone record %d: %s", i, exc.record)
 
     def get_url_for_key(self, key: str) -> str:
         self.load_apps_data()
@@ -121,8 +126,10 @@ class SyncManager:
                 continue
 
             resp.raise_for_status()
-            log.info("Created %s at %s: %d", key, data["url"], resp.status_code)
+            log.debug("Created %s at %s: %d", key, data["url"], resp.status_code)
             self.apps_data[key] = data
+        
+        log.info("Record creation finished")
 
     @run_once
     def update(self):
@@ -130,25 +137,29 @@ class SyncManager:
         self.load_ks_data()
 
         update_candidates = self.ks_data.keys() & self.apps_data.keys()
+        update_count = 0
 
         for key in update_candidates:
             current_record = self.apps_data[key]
             desired_record = self.ks_data[key]
 
             if should_update(desired_record, current_record):
+                update_count += 1
                 url = current_record["url"]
                 resp = requests.put(url, auth=self.auth, data=desired_record)
                 resp.raise_for_status()
-                log.info("Updated %s", url)
+                log.debug("Updated %s", url)
+
+        log.info("Updated %d records", update_count)
+
+    def split(self, ks_record: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+        """Split a single incoming record into one or more translated outgoing records"""
+
+        yield self.translate(ks_record)
+
 
     def translate(self, ks_record: Dict[str, Any]) -> Dict[str, Any]:
         """Translate a Keystone record into an apps record"""
-
-        if not self.ks_key in ks_record:
-            raise MissingKey(ks_record)
-        
-        if not ks_record[self.ks_key]:
-            raise MissingKeyValue(ks_record)
 
         out = {}
 
@@ -160,6 +171,17 @@ class SyncManager:
             out[apps_attr] = val
 
         return out
+
+    def get_key_value(self, record: Dict[str, Any]) -> Hashable:
+        """Get the key to use for a given record"""
+
+        if not self.key_name in record:
+            raise MissingKey(record)
+        
+        if not record[self.key_name]:
+            raise MissingKeyValue(record)
+        
+        return record[self.key_name]
 
     def sync(self):
         self.load_ks_data()

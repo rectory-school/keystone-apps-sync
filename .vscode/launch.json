@@ -10,22 +10,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
-            "args": [
-                "--username",
-                "sissync@rectoryschool.org",
-                "--password",
-                "VtlzBByPg8yFmuW5HkKjKM60IChYBYuhxbhuQQpjHlMhwfpgRfNtJNqtdobqlv6",
-                "--api-root",
-                "http://localhost:8000/sis/api/",
-                "--student-file",
-                "${workspaceFolder}/samples/ksPERMRECS.xml.json",
-                "--teacher-file",
-                "${workspaceFolder}/samples/ksTEACHERS.xml.json",
-                "--course-file",
-                "${workspaceFolder}/samples/ksCOURSES.xml.json",
-                "--families-file",
-                "${workspaceFolder}/samples/ptFAMILIES.xml.json",
-            ],
+            "envFile": "${workspaceFolder}/.env",
+            
         }
     ]
 }

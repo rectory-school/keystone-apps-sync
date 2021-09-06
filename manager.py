@@ -1,6 +1,6 @@
 """Base manager"""
 
-from typing import Hashable, List, Tuple, Dict, Any, Callable, Iterable
+from typing import Hashable, List, Tuple, Dict, Any, Callable, Iterable, Optional
 from functools import cache, wraps
 import logging
 import json
@@ -24,10 +24,16 @@ class AppsManager:
         self.session = requests.session()
         self.session.auth = auth
     
-    def get_url_for_key(self, key: str) -> str:
+    def get_url_for_key(self, key: str) -> Optional[str]:
         """Get the URL for a given key"""
 
+        if not key:
+            return None
+
         self.load_apps_data()
+
+        if not key in self.apps_data:
+            return None
 
         return self.apps_data[key]["url"]
 
@@ -210,21 +216,23 @@ class SyncManager(AppsManager):
 class GetOrCreateManager(AppsManager):
     """Get or create manager gets URLS for various IDs and such"""
 
-    def get_url_for_key(self, key) -> str:
+    def get_url_for_key(self, key) -> Optional[str]:
         self.load_apps_data()
 
+        if not key:
+            return None
+
         if key in self.apps_data:
-            return self.apps_data[key]
+            return self.apps_data[key]["url"]
         
         # We didn't have it - create the record
         resp = self.session.post(self.url, json={self.key_name: key})
         resp.raise_for_status()
         data = resp.json()
-        url = data["url"]
 
-        self.apps_data[key] = url
+        self.apps_data[key] = data
 
-        return url
+        return data["url"]
 
 
 def should_update(desired: Dict[str, Any], current: Dict[str, Any]) -> bool:

@@ -2,9 +2,9 @@
 
 import logging
 
-from typing import Dict, Iterable, Any, Hashable
-from manager import SyncManager
-from parsers import active_parse, email_parse_continue_blank
+from typing import Dict, Iterable, Any, Hashable, Tuple
+from manager import SyncManager, GetOrCreateManager
+from parsers import active_parse, email_parse_continue_blank, is_boarder_from_boarder_day
 
 log = logging.getLogger(__name__)
 
@@ -94,7 +94,8 @@ class ParentManager(SyncManager):
                 out['parent_id'] = prefix
 
                 if 'email' in out:
-                    out['email'] = email_parse_continue_blank(out['email'].strip())
+                    out['email'] = email_parse_continue_blank(
+                        out['email'].strip())
 
                 yield out
 
@@ -107,6 +108,66 @@ class ParentManager(SyncManager):
                 'address': ks_record['P_address_full'],
                 'phone_home': ks_record["P_phone_H"],
             }
-    
+
     def get_key_value(self, record: Dict[str, Any]) -> Hashable:
         return (record["family_id"], record["parent_id"])
+
+
+class AcademicYearManager(GetOrCreateManager):
+    """Academic year manager"""
+
+    url_key = 'academic_years'
+    key_name = 'year'
+
+class GradeManager(GetOrCreateManager):
+    """Grade manager"""
+
+    url_key = 'grades'
+    key_name = 'grade'
+
+class DormManager(GetOrCreateManager):
+    """Dorm manager"""
+
+    url_key = 'dorms'
+    key_name = 'dorm_name'
+
+class EnrollmentManager(SyncManager):
+    url_key = "enrollments"
+
+    field_map = [
+        ('student', 'IDStudent'),
+        ('academic_year', 'AcademicYear'),
+        ('boarder', 'BoarderDay'),
+        ('dorm', 'DormName'),
+        ('grade', 'Grade'),
+        ('division', 'Division'),
+        ('section', 'Section Letter'),
+        ('advisor', 'IDAdvisor'),
+        ('status_enrollment', 'StatusEnrollment'),
+        ('status_attending', 'StatusAttending'),
+        ('enrolled_date', 'EnrollmentDate')
+    ]
+
+    def __init__(self,
+                 api_root: str,
+                 auth: Tuple[str, str],
+                 ks_filename: str, 
+                 academic_year_manager: AcademicYearManager, 
+                 grade_manager: GradeManager,
+                 student_manager: StudentManager,
+                 teacher_manager: TeacherManager,
+                 dorm_manager: DormManager):
+
+        super().__init__(api_root, auth, ks_filename=ks_filename)
+
+        self.field_translations = {
+            'grade': grade_manager.get_url_for_key,
+            'academic_year': academic_year_manager.get_url_for_key,
+            'student': student_manager.get_url_for_key,
+            'advisor': teacher_manager.get_url_for_key,
+            'boarder': is_boarder_from_boarder_day,
+            'dorm': dorm_manager.get_url_for_key,
+        }
+
+    def get_key_value(self, record: Dict[str, Any]) -> Hashable:
+        return (record['student'], record['academic_year'])

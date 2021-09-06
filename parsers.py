@@ -40,3 +40,13 @@ def email_parse_fail(val: str) -> str:
 
     validate_email(val)
     return val
+
+def is_boarder_from_boarder_day(val: str) -> bool:
+    if val == 'B':
+        return True
+    
+    if val == 'D':
+        return False
+
+    log.warn("Unknown boarder/day value: %s", val)
+    return None

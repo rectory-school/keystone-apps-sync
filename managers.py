@@ -93,6 +93,9 @@ class ParentManager(SyncManager):
                 out['phone_home'] = ks_record["P_phone_H"]
                 out['parent_id'] = prefix
 
+                if 'email' in out:
+                    out['email'] = email_parse_continue_blank(out['email'].strip())
+
                 yield out
 
         if not did_create:

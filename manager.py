@@ -14,21 +14,33 @@ from single import run_once
 log = logging.getLogger(__name__)
 
 
-class SyncManager:
+class AppsManager:
     url_key: str = None
     key_name: str = None
 
-    field_map: List[Tuple[str, str]] = None
-    field_translations: Dict[str, Callable[[Any], Any]] = {}
-
-    def __init__(self, api_root: str, auth: Tuple[str, str], ks_filename: str = None):
+    def __init__(self, api_root: str, auth: Tuple[str, str]):
         self.api_root = api_root
-        self.ks_filename = ks_filename
         self.apps_data = {}
-        self.ks_data = {}
-
         self.session = requests.session()
         self.session.auth = auth
+    
+    def get_url_for_key(self, key: str) -> str:
+        """Get the URL for a given key"""
+
+        self.load_apps_data()
+
+        return self.apps_data[key]["url"]
+
+    def get_key_value(self, record: Dict[str, Any]) -> Hashable:
+        """Get the key to use for a given record"""
+
+        if not self.key_name in record:
+            raise MissingKey(record)
+        
+        if not record[self.key_name]:
+            raise MissingKeyValue(record)
+        
+        return record[self.key_name]
 
     @cache
     def get_url_map(self) -> Dict[str, str]:
@@ -36,9 +48,6 @@ class SyncManager:
         resp.raise_for_status()
         return resp.json()
 
-    @property
-    def url(self) -> str:
-        return self.get_url_map()[self.url_key]
 
     @run_once
     def load_apps_data(self):
@@ -58,9 +67,28 @@ class SyncManager:
             for record in resp["results"]:
                 key = self.get_key_value(record)
                 
+                # We're only storing the URLs here
                 self.apps_data[key] = record
 
         log.info("Finished loading from %s, got %d records", self.url, len(self.apps_data))
+    
+    @property
+    def url(self) -> str:
+        return self.get_url_map()[self.url_key]
+
+class SyncManager(AppsManager):
+    field_map: List[Tuple[str, str]] = None
+    field_translations: Dict[str, Callable[[Any], Any]] = {}
+
+    def __init__(self, api_root: str, auth: Tuple[str, str], ks_filename: str = None):
+        super().__init__(api_root=api_root, auth=auth)
+        self.ks_filename = ks_filename
+        self.ks_data = {}
+
+    def get_url_for_key(self, key: str) -> str:
+        self.create()
+
+        return super().get_url_for_key(key)
 
     @run_once
     def load_ks_data(self) -> Dict[str, dict]:
@@ -79,11 +107,7 @@ class SyncManager:
                 except InvalidRecord as exc:
                     log.error("Unable to load Keystone record %d: %s", i, exc.record)
 
-    def get_url_for_key(self, key: str) -> str:
-        self.load_apps_data()
-        self.create()  # Make sure records are up to date
-
-        return self.apps_data[key]["url"]
+    
 
     @run_once
     def delete(self):
@@ -174,17 +198,6 @@ class SyncManager:
 
         return out
 
-    def get_key_value(self, record: Dict[str, Any]) -> Hashable:
-        """Get the key to use for a given record"""
-
-        if not self.key_name in record:
-            raise MissingKey(record)
-        
-        if not record[self.key_name]:
-            raise MissingKeyValue(record)
-        
-        return record[self.key_name]
-
     def sync(self):
         self.load_ks_data()
         self.load_apps_data()
@@ -192,6 +205,26 @@ class SyncManager:
         self.create()
         self.update()
         self.delete()
+
+
+class GetOrCreateManager(AppsManager):
+    """Get or create manager gets URLS for various IDs and such"""
+
+    def get_url_for_key(self, key) -> str:
+        self.load_apps_data()
+
+        if key in self.apps_data:
+            return self.apps_data[key]
+        
+        # We didn't have it - create the record
+        resp = self.session.post(self.url, json={self.key_name: key})
+        resp.raise_for_status()
+        data = resp.json()
+        url = data["url"]
+
+        self.apps_data[key] = url
+
+        return url
 
 
 def should_update(desired: Dict[str, Any], current: Dict[str, Any]) -> bool:

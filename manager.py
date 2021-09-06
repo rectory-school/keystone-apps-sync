@@ -115,13 +115,12 @@ class SyncManager:
             if resp.status_code >= 400 and resp.status_code < 500:
                 log.warning("Unexpected status code when creating %s: %s", key, resp.status_code)
                 for attr, errors in data.items():
-                    if attr in desired_record:
+                    if attr == 'detail' and isinstance(errors, str):
+                        log.error("Error when creating %s: %s", key, errors)
+                    else:                        
                         for error in errors:
                             log.error("Error when creating %s on field %s: '%s'. Original value was '%s'",
                                       key, attr, error, desired_record[attr])
-
-                    elif attr == 'detail':
-                        log.error("Error when creating %s: %s", key, errors)
 
                 continue
 

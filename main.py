@@ -5,6 +5,7 @@
 import argparse
 import logging
 import os
+import pidfile
 
 from managers import AcademicYearManager, DormManager, EnrollmentManager, GradeManager, ParentManager, SectionManager, StudentManager, TeacherManager, CourseManager
 
@@ -51,48 +52,52 @@ def main():
     auth = (args.username, args.password)
     api_root = args.api_root
 
-    academic_years = AcademicYearManager(api_root, auth)
-    grades = GradeManager(api_root, auth)
-    dorms = DormManager(api_root, auth)
+    with pidfile.PidFile('running.pid'):
+        log.info("Pid lock acquired")
 
-    students = StudentManager(api_root,
-                              auth=auth,
-                              ks_filename=args.student_file)
-    students.sync()
+        academic_years = AcademicYearManager(api_root, auth)
+        grades = GradeManager(api_root, auth)
+        dorms = DormManager(api_root, auth)
 
-    teachers = TeacherManager(api_root,
-                              auth=auth,
-                              ks_filename=args.teacher_file)
-    teachers.sync()
+        students = StudentManager(api_root,
+                                auth=auth,
+                                ks_filename=args.student_file)
+        students.sync()
 
-    courses = CourseManager(api_root,
-                            auth=auth,
-                            ks_filename=args.course_file)
-    courses.sync()
+        teachers = TeacherManager(api_root,
+                                auth=auth,
+                                ks_filename=args.teacher_file)
+        teachers.sync()
 
-    sections = SectionManager(api_root,
-                              auth,
-                              ks_filename=args.section_file,
-                              academic_year_manager=academic_years,
-                              teacher_manager=teachers,
-                              course_manager=courses)
+        courses = CourseManager(api_root,
+                                auth=auth,
+                                ks_filename=args.course_file)
+        courses.sync()
 
-    sections.sync()
+        sections = SectionManager(api_root,
+                                auth,
+                                ks_filename=args.section_file,
+                                academic_year_manager=academic_years,
+                                teacher_manager=teachers,
+                                course_manager=courses)
 
-    enrollments = EnrollmentManager(api_root,
-                                    auth=auth,
-                                    ks_filename=args.enrollments_file,
-                                    academic_year_manager=academic_years,
-                                    grade_manager=grades,
-                                    student_manager=students,
-                                    teacher_manager=teachers,
-                                    dorm_manager=dorms,)
-    enrollments.sync()
+        sections.sync()
 
-    parents = ParentManager(api_root, auth=auth,
-                            ks_filename=args.families_file)
-    parents.sync()
+        enrollments = EnrollmentManager(api_root,
+                                        auth=auth,
+                                        ks_filename=args.enrollments_file,
+                                        academic_year_manager=academic_years,
+                                        grade_manager=grades,
+                                        student_manager=students,
+                                        teacher_manager=teachers,
+                                        dorm_manager=dorms,)
+        enrollments.sync()
 
+        parents = ParentManager(api_root, auth=auth,
+                                ks_filename=args.families_file)
+        parents.sync()
+    
+    
 
 if __name__ == "__main__":
     main()

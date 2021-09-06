@@ -119,17 +119,20 @@ class AcademicYearManager(GetOrCreateManager):
     url_key = 'academic_years'
     key_name = 'year'
 
+
 class GradeManager(GetOrCreateManager):
     """Grade manager"""
 
     url_key = 'grades'
     key_name = 'grade'
 
+
 class DormManager(GetOrCreateManager):
     """Dorm manager"""
 
     url_key = 'dorms'
     key_name = 'dorm_name'
+
 
 class EnrollmentManager(SyncManager):
     url_key = "enrollments"
@@ -151,8 +154,8 @@ class EnrollmentManager(SyncManager):
     def __init__(self,
                  api_root: str,
                  auth: Tuple[str, str],
-                 ks_filename: str, 
-                 academic_year_manager: AcademicYearManager, 
+                 ks_filename: str,
+                 academic_year_manager: AcademicYearManager,
                  grade_manager: GradeManager,
                  student_manager: StudentManager,
                  teacher_manager: TeacherManager,
@@ -171,3 +174,33 @@ class EnrollmentManager(SyncManager):
 
     def get_key_value(self, record: Dict[str, Any]) -> Hashable:
         return (record['student'], record['academic_year'])
+
+
+class SectionManager(SyncManager):
+    """Section manager"""
+
+    url_key = 'sections'
+    field_map = [
+        ('academic_year', 'AcademicYear'),
+        ('course', 'CourseNumber'),
+        ('csn', 'CourseSectionNumber'),
+        ('teacher', 'IDTeacher')
+    ]
+
+    def __init__(self, api_root: str,
+                 auth: Tuple[str, str],
+                 ks_filename: str,
+                 academic_year_manager: AcademicYearManager,
+                 teacher_manager: TeacherManager,
+                 course_manager: CourseManager):
+
+        super().__init__(api_root, auth, ks_filename=ks_filename)
+
+        self.field_translations = {
+            'teacher': teacher_manager.get_url_for_key,
+            'course': course_manager.get_url_for_key,
+            'academic_year': academic_year_manager.get_url_for_key,
+        }
+    
+    def get_key_value(self, record: Dict[str, Any]) -> Hashable:
+        return (record['academic_year'], record['csn'])

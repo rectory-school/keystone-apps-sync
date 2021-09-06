@@ -2,8 +2,8 @@
 
 import logging
 
-from typing import Dict, Iterable, Any, Hashable, Tuple
-from manager import SyncManager, GetOrCreateManager, MissingKeyValue, MissingKey
+from typing import Dict, Iterable, Any, Hashable, Tuple, Optional
+from manager import AppsManager, SyncManager, GetOrCreateManager, MissingKeyValue, MissingKey
 from parsers import active_parse, email_parse_continue_blank, is_boarder_from_boarder_day
 
 log = logging.getLogger(__name__)
@@ -203,6 +203,54 @@ class SectionManager(SyncManager):
             'course': course_manager.get_url_for_key,
             'academic_year': academic_year_manager.get_url_for_key,
         }
-    
+
     def get_key_value(self, record: Dict[str, Any]) -> Hashable:
         return (record['academic_year'], record['csn'])
+
+class DetentionCodeManager(GetOrCreateManager):
+    """Get only """
+
+    url_key = 'detention_codes'
+    key_name = 'code'
+
+class DetentionOffenseManager(GetOrCreateManager):
+    """Get only """
+
+    url_key = 'detention_offenses'
+    key_name = 'offense'
+
+class DetentionManager(SyncManager):
+    url_key = 'detentions'
+    key_name = 'detention_id'
+
+    field_map = [
+        ('detention_id', 'IDINCIDENT'),
+        ('academic_year', 'AcademicYear'),
+        ('comments', 'Comments'),
+        ('date', 'Det Date'),
+        ('offense', 'Offense'),
+        ('student', 'IDSTUDENT'),
+        ('teacher', 'KSTeachers::IDTEACHER'),
+        ('code', 'Code'),
+    ]
+
+    required_fields = ['offense', 'student', 'academic_year', 'teacher']
+
+    def __init__(self, api_root: str,
+                 auth: Tuple[str, str],
+                 ks_filename: str,
+                 academic_year_manager: AcademicYearManager,
+                 student_manager: StudentManager,
+                 teacher_manager: TeacherManager,
+                 offense_manager: DetentionOffenseManager,
+                 code_manager: DetentionCodeManager):
+
+        super().__init__(api_root, auth, ks_filename=ks_filename)
+
+        self.field_translations = {
+            'academic_year': academic_year_manager.get_url_for_key,
+            'student': student_manager.get_url_for_key,
+            'teacher': teacher_manager.get_url_for_key,
+            'offense': offense_manager.get_url_for_key,
+            'code': code_manager.get_url_for_key,
+        }

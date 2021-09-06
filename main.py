@@ -7,7 +7,7 @@ import logging
 import os
 import pidfile
 
-from managers import AcademicYearManager, DormManager, EnrollmentManager, GradeManager, ParentManager, SectionManager, StudentManager, TeacherManager, CourseManager
+from managers import AcademicYearManager, DetentionCodeManager, DetentionManager, DetentionOffenseManager, DormManager, EnrollmentManager, GradeManager, ParentManager, SectionManager, StudentManager, TeacherManager, CourseManager
 
 logging.basicConfig(level=logging.INFO)
 
@@ -26,6 +26,10 @@ def main():
     parser.add_argument("--teacher-file",
                         default=os.environ.get("TEACHER_FILE",
                                                "data/ksTEACHERS.xml.json"))
+
+    parser.add_argument("--detention-file",
+                        default=os.environ.get("DETENTION_FILE",
+                                               "data/discipline.xml.json"))
 
     parser.add_argument("--course-file",
                         default=os.environ.get("COURSE_FILE",
@@ -48,7 +52,7 @@ def main():
     parser.add_argument("--password",  default=os.environ.get("PASSWORD"))
 
     args = parser.parse_args()
-    
+
     auth = (args.username, args.password)
     api_root = args.api_root
 
@@ -58,16 +62,28 @@ def main():
         academic_years = AcademicYearManager(api_root, auth)
         grades = GradeManager(api_root, auth)
         dorms = DormManager(api_root, auth)
+        detention_offenses = DetentionOffenseManager(api_root, auth)
+        detention_codes = DetentionCodeManager(api_root, auth)
 
         students = StudentManager(api_root,
-                                auth=auth,
-                                ks_filename=args.student_file)
+                                  auth=auth,
+                                  ks_filename=args.student_file)
         students.sync()
 
         teachers = TeacherManager(api_root,
-                                auth=auth,
-                                ks_filename=args.teacher_file)
+                                  auth=auth,
+                                  ks_filename=args.teacher_file)
         teachers.sync()
+
+        detentions = DetentionManager(api_root,
+                                      auth,
+                                      ks_filename=args.detention_file,
+                                      academic_year_manager=academic_years,
+                                      offense_manager=detention_offenses,
+                                      code_manager = detention_codes,
+                                      student_manager=students,
+                                      teacher_manager=teachers,)
+        detentions.sync()
 
         courses = CourseManager(api_root,
                                 auth=auth,
@@ -75,11 +91,11 @@ def main():
         courses.sync()
 
         sections = SectionManager(api_root,
-                                auth,
-                                ks_filename=args.section_file,
-                                academic_year_manager=academic_years,
-                                teacher_manager=teachers,
-                                course_manager=courses)
+                                  auth,
+                                  ks_filename=args.section_file,
+                                  academic_year_manager=academic_years,
+                                  teacher_manager=teachers,
+                                  course_manager=courses)
 
         sections.sync()
 
@@ -96,8 +112,7 @@ def main():
         parents = ParentManager(api_root, auth=auth,
                                 ks_filename=args.families_file)
         parents.sync()
-    
-    
+
 
 if __name__ == "__main__":
     main()

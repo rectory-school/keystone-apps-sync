@@ -198,7 +198,11 @@ class SyncManager(AppsManager):
         out = {}
 
         for apps_attr, ks_attr in self.field_map:
-            val = ks_record[ks_attr].strip()  # DRF will strip whitespace, so this prevents a needless update
+            val = ks_record[ks_attr]
+            
+            if isinstance(val, str):
+                val = val.strip()  # DRF will strip whitespace, so this prevents a needless update
+
             if apps_attr in self.field_translations:
                 val = self.field_translations[apps_attr](val)
 
@@ -210,7 +214,7 @@ class SyncManager(AppsManager):
             
             if not out[key]:
                 raise MissingRequiredValue(out, key)
-                
+
         return out
 
     def sync(self):

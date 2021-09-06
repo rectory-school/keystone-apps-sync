@@ -3,7 +3,7 @@
 import logging
 
 from typing import Dict, Iterable, Any, Hashable, Tuple
-from manager import SyncManager, GetOrCreateManager
+from manager import SyncManager, GetOrCreateManager, MissingKeyValue, MissingKey
 from parsers import active_parse, email_parse_continue_blank, is_boarder_from_boarder_day
 
 log = logging.getLogger(__name__)
@@ -186,6 +186,8 @@ class SectionManager(SyncManager):
         ('csn', 'CourseSectionNumber'),
         ('teacher', 'IDTeacher')
     ]
+
+    required_fields = ['course', 'csn', 'academic_year']
 
     def __init__(self, api_root: str,
                  auth: Tuple[str, str],

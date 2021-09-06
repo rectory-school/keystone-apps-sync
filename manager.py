@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 class AppsManager:
     url_key: str = None
     key_name: str = None
-
+    
     def __init__(self, api_root: str, auth: Tuple[str, str]):
         self.api_root = api_root
         self.apps_data = {}
@@ -85,6 +85,8 @@ class AppsManager:
 class SyncManager(AppsManager):
     field_map: List[Tuple[str, str]] = None
     field_translations: Dict[str, Callable[[Any], Any]] = {}
+    required_fields: List[str] = []
+    
 
     def __init__(self, api_root: str, auth: Tuple[str, str], ks_filename: str = None):
         super().__init__(api_root=api_root, auth=auth)
@@ -202,6 +204,13 @@ class SyncManager(AppsManager):
 
             out[apps_attr] = val
 
+        for key in self.required_fields:
+            if not key in out:
+                raise MissingRequiredValue(out, key)
+            
+            if not out[key]:
+                raise MissingRequiredValue(out, key)
+                
         return out
 
     def sync(self):
@@ -263,3 +272,11 @@ class MissingKeyValue(InvalidRecord):
 
     def __str__(self):
         return "Key value is missing"
+
+class MissingRequiredValue(InvalidRecord):
+    def __init__(self, record: Dict[str, Any], key: str):
+        super().__init__(record)
+        self.key = key
+    
+    def __str__(self):
+        return f"Missing key '{self.key}'"

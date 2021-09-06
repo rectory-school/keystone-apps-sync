@@ -17,7 +17,6 @@ log = logging.getLogger(__name__)
 class SyncManager:
     apps_url_key: str = None
     apps_key: str = None
-    ks_key: str = None
 
     field_map: List[Tuple[str, str]] = None
     field_translations: Dict[str, Callable[[Any], Any]] = {}
@@ -64,7 +63,14 @@ class SyncManager:
     def load_ks_data(self) -> Dict[str, dict]:
         with open(self.ks_filename) as f_in:
             data = json.load(f_in)
-            self.ks_data = {record[self.ks_key]: record for record in data["records"]}
+
+            for i, record in enumerate(data["records"]):
+                try:
+                    translated = self.translate(record)
+                    key = translated[self.apps_key]
+                    self.ks_data[key] = translated
+                except InvalidRecord as exc:
+                    log.error("Unable to load Keystone record %d: %s", i, exc)
 
     def get_url_for_key(self, key: str) -> str:
         self.load_apps_data()
@@ -80,8 +86,8 @@ class SyncManager:
         to_delete = self.apps_data.keys() - self.ks_data.keys()
 
         for key in to_delete:
-            apps_record = self.apps_data[key]
-            url = apps_record["url"]
+            record = self.apps_data[key]
+            url = record["url"]
 
             resp = requests.delete(url, auth=self.auth)
             resp.raise_for_status()
@@ -97,18 +103,17 @@ class SyncManager:
         log.info("Creating %d new records", len(to_create))
 
         for key in to_create:
-            ks_record = self.ks_data[key]
-            apps_record = self.translate(ks_record)
-            resp = requests.post(self.url, auth=self.auth, data=apps_record)
+            desired_record = self.ks_data[key]
+            resp = requests.post(self.url, auth=self.auth, data=desired_record)
             data = resp.json()
 
             if resp.status_code >= 400 and resp.status_code < 500:
                 log.warning("Unexpected status code when creating %s: %s", key, resp.status_code)
                 for attr, errors in data.items():
-                    if attr in apps_record:
+                    if attr in desired_record:
                         for error in errors:
                             log.error("Error when creating %s on field %s: '%s'. Original value was '%s'",
-                                      key, attr, error, apps_record[attr])
+                                      key, attr, error, desired_record[attr])
 
                     elif attr == 'detail':
                         log.error("Error when creating %s: %s", key, errors)
@@ -127,17 +132,23 @@ class SyncManager:
         update_candidates = self.ks_data.keys() & self.apps_data.keys()
 
         for key in update_candidates:
-            ks_translated = self.translate(self.ks_data[key])
             current_record = self.apps_data[key]
+            desired_record = self.ks_data[key]
 
-            if should_update(ks_translated, current_record):
+            if should_update(desired_record, current_record):
                 url = current_record["url"]
-                resp = requests.put(url, auth=self.auth, data=ks_translated)
+                resp = requests.put(url, auth=self.auth, data=desired_record)
                 resp.raise_for_status()
                 log.info("Updated %s", url)
 
     def translate(self, ks_record: Dict[str, Any]) -> Dict[str, Any]:
         """Translate a Keystone record into an apps record"""
+
+        if not self.ks_key in ks_record:
+            raise MissingKey(ks_record)
+        
+        if not ks_record[self.ks_key]:
+            raise MissingKeyValue(ks_record)
 
         out = {}
 
@@ -169,3 +180,21 @@ def should_update(desired: Dict[str, Any], current: Dict[str, Any]) -> bool:
             return True
 
     return False
+
+class InvalidRecord(Exception):
+    """Indicates a record is invalid"""
+
+    def __init__(self, record: Dict[str, Any]):
+        self.record = record
+
+class MissingKey(InvalidRecord):
+    """Indicates the key field is missing"""
+
+    def __str__(self):
+        return "Key field is missing"
+
+class MissingKeyValue(InvalidRecord):
+    """Indicates the key value is missing"""
+
+    def __str__(self):
+        return "Key value is missing"

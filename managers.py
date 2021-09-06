@@ -3,7 +3,7 @@
 import logging
 
 from manager import SyncManager
-from parsers import active_parse
+from parsers import active_parse, email_parse_continue_blank
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +20,10 @@ class StudentManager(SyncManager):
         ('email', 'EMailSchool'),
         ('gender', 'Sex'),
     ]
+
+    field_translations = {
+        'email': email_parse_continue_blank,
+    }
 
 
 class TeacherManager(SyncManager):

@@ -172,20 +172,23 @@ class SyncManager(AppsManager):
         log.info("Creating %d new records under %s",
                  len(to_create), self.url_key)
 
+        error_count = 0
+
         for key in tqdm(to_create):
             desired_record = self.ks_data[key]
             resp = self.session.post(self.url, json=desired_record)
             data = resp.json()
 
             if resp.status_code >= 400 and resp.status_code < 500:
-                log.warning(
+                error_count += 1
+                log.debug(
                     "Unexpected status code when creating %s: %s", key, resp.status_code)
                 for attr, errors in data.items():
                     if attr == 'detail' and isinstance(errors, str):
-                        log.error("Error when creating %s: %s", key, errors)
+                        log.debug("Error when creating %s: %s", key, errors)
                     else:
                         for error in errors:
-                            log.error("Error when creating %s on field %s: '%s'. Original value was '%s'",
+                            log.debug("Error when creating %s on field %s: '%s'. Original value was '%s'",
                                       key, attr, error, desired_record[attr])
 
                 continue
@@ -194,6 +197,9 @@ class SyncManager(AppsManager):
             log.debug("Created %s at %s: %d", key,
                       data["url"], resp.status_code)
             self.apps_data[key] = data
+
+        if error_count:
+            log.error("Encoutered %d errors when creating records in app system", error_count)
 
         log.info("Record creation finished")
 
@@ -218,16 +224,35 @@ class SyncManager(AppsManager):
             return
 
         log.info("Updating %d records under %s", len(to_update), self.url_key)
+        error_count = 0
 
         for key in tqdm(to_update):
             desired_record = self.ks_data[key]
             current_record = self.apps_data[key]
             url = current_record["url"]
             resp = self.session.put(url, json=desired_record)
+
+            if resp.status_code >= 400 and resp.status_code < 500:
+                error_count += 1
+                data = resp.json()
+
+                log.debug("Unexpected status code when updating %s: %s", url, resp.status_code)
+                for attr, errors in data.items():
+                    if attr == 'detail' and isinstance(errors, str):
+                        log.debug("Error when updating %s: %s", key, errors)
+                    else:
+                        for error in errors:
+                            log.debug("Error when updating %s on field %s: '%s'. Desired value was '%s'",
+                                      url, attr, error, desired_record[attr])
+
+                continue
+
             resp.raise_for_status()
             log.debug("Updated %s", url)
+        if error_count:
+            log.error("Encoutered %d errors when updating Apps system", error_count)
 
-        log.info("Updated %d records", len(to_update))
+        log.info("Record updates finished")
 
     def split(self, ks_record: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         """Split a single incoming record into one or more translated outgoing records"""

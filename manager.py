@@ -1,5 +1,6 @@
 """Base manager"""
 
+import time
 from typing import Hashable, List, Tuple, Dict, Any, Callable, Iterable, Optional
 from functools import cache, wraps
 import logging
@@ -51,10 +52,14 @@ class AppsManager:
 
     @cache
     def get_url_map(self) -> Dict[str, str]:
-        resp = self.session.get(self.api_root)
-        resp.raise_for_status()
-        return resp.json()
-
+        for i in range(10):
+            try:
+                resp = self.session.get(self.api_root)
+                resp.raise_for_status()
+                return resp.json()
+            except requests.ConnectionError:
+                log.error("Connection error when getting URL map")
+                time.sleep(5)
 
     @run_once
     def load_apps_data(self):

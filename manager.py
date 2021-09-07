@@ -64,6 +64,9 @@ class AppsManager:
     @run_once
     def load_apps_data(self):
         url = self.url
+
+        log.info("Beginning apps data load from %s", url)
+
         url_parts = list(urllib.parse.urlparse(url))
         query = dict(urllib.parse.parse_qsl(url_parts[4]))
         query.update({'page_size': 5000})
@@ -107,6 +110,8 @@ class SyncManager(AppsManager):
 
     @run_once
     def load_ks_data(self) -> Dict[str, dict]:
+        log.info("Beginning Keystone data load from %s", self.ks_filename)
+
         with open(self.ks_filename) as f_in:
             data = json.load(f_in)
 
@@ -131,6 +136,10 @@ class SyncManager(AppsManager):
 
         to_delete = self.apps_data.keys() - self.ks_data.keys()
         
+        if not to_delete:
+            log.info("No records to delete")
+            return
+
         log.info("Deleting %d records under %s", len(to_delete), self.url_key)
 
         for key in tqdm(to_delete):
@@ -147,6 +156,10 @@ class SyncManager(AppsManager):
         self.load_ks_data()
 
         to_create = self.ks_data.keys() - self.apps_data.keys()
+
+        if not to_create:
+            log.info("No records to create")
+            return
 
         log.info("Creating %d new records under %s", len(to_create), self.url_key)
 
@@ -189,6 +202,10 @@ class SyncManager(AppsManager):
             if should_update(desired_record, current_record):
                 to_update.add(key)
         
+        if not to_update:
+            log.info("No records to update")
+            return
+
         log.info("Updating %d records under %s", len(to_update), self.url_key)
 
         for key in tqdm(to_update):

@@ -4,7 +4,8 @@ import logging
 
 from typing import Dict, Iterable, Any, Hashable, Tuple, Optional
 from manager import AppsManager, SyncManager, GetOrCreateManager, MissingKeyValue, MissingKey
-from parsers import active_parse, email_parse_continue_blank, is_boarder_from_boarder_day
+
+import parsers
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ class StudentManager(SyncManager):
     ]
 
     field_translations = {
-        'email': email_parse_continue_blank,
+        'email': parsers.EmailParser(default_value='').parse,
     }
 
 
@@ -42,7 +43,7 @@ class TeacherManager(SyncManager):
     ]
 
     field_translations = {
-        'active': active_parse,
+        'active': parsers.BooleanParse(default_value=False).parse,
     }
 
 
@@ -94,8 +95,8 @@ class ParentManager(SyncManager):
                 out['parent_id'] = prefix
 
                 if 'email' in out:
-                    out['email'] = email_parse_continue_blank(
-                        out['email'].strip())
+                    parser = parsers.EmailParser(default_value='')
+                    out['email'] = parser.parse(out['email'].strip())
 
                 yield out
 
@@ -168,7 +169,7 @@ class EnrollmentManager(SyncManager):
             'academic_year': academic_year_manager.get_url_for_key,
             'student': student_manager.get_url_for_key,
             'advisor': teacher_manager.get_url_for_key,
-            'boarder': is_boarder_from_boarder_day,
+            'boarder': parsers.BoarderDayParser(default_value=False).parse,
             'dorm': dorm_manager.get_url_for_key,
         }
 
@@ -303,7 +304,7 @@ class StudentRegistrationManager(SyncManager):
 
         if not out['student']:
             raise MissingKeyValue(ks_record)
-        
+
         if not out['section']:
             raise MissingKeyValue(ks_record)
 

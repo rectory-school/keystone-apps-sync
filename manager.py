@@ -182,7 +182,7 @@ class SyncManager(AppsManager):
             if should_update(desired_record, current_record):
                 to_update.add(key)
         
-        for key in tqdm(o_update):
+        for key in tqdm(to_update):
             desired_record = self.ks_data[key]
             url = current_record["url"]
             resp = self.session.put(url, json=desired_record)

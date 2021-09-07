@@ -5,9 +5,9 @@ name = "pypi"
 
 [packages]
 requests = "*"
-pidfile = "*"
 tqdm = "*"
 pyyaml = "*"
+portalocker = "*"
 
 [dev-packages]
 pylint = "*"

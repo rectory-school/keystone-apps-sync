@@ -189,6 +189,7 @@ class SyncManager(AppsManager):
         
         for key in tqdm(to_update):
             desired_record = self.ks_data[key]
+            current_record = self.apps_data[key]
             url = current_record["url"]
             resp = self.session.put(url, json=desired_record)
             resp.raise_for_status()
@@ -295,4 +296,3 @@ class MissingRequiredValue(InvalidRecord):
     
     def __str__(self):
         return f"Missing key '{self.key}'"
-        

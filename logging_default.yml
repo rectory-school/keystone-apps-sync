@@ -14,8 +14,8 @@ handlers:
     level: DEBUG
     formatter: standard
     filename: sync.log
-    maxBytes: 10485760
     backupCount: 3
+    mode: w
 loggers:
   null:
     handlers:

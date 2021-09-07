@@ -4,12 +4,13 @@
 
 import argparse
 import logging
+import logging.config
 import os
 import pidfile
 
-from managers import AcademicYearManager, DetentionCodeManager, DetentionManager, DetentionOffenseManager, DormManager, EnrollmentManager, GradeManager, ParentManager, SectionManager, StudentManager, StudentRegistrationManager, TeacherManager, CourseManager
+import yaml
 
-logging.basicConfig(level=logging.INFO)
+import managers
 
 log = logging.getLogger(__name__)
 
@@ -17,6 +18,112 @@ log = logging.getLogger(__name__)
 def main():
     """Main entrypoint"""
 
+    args = get_args()
+    configure_logging(args)
+    
+    with pidfile.PidFile('running.pid'):
+        log.info("Pid lock acquired")
+        log.info("beginning sync")
+
+        sync(args)
+
+        log.info("sync finished")
+
+
+def configure_logging(args):
+    log_config_file = args.logging_config
+
+    with open(log_config_file) as f_in:
+        data = yaml.load(f_in, Loader=yaml.Loader)
+        if None in data["loggers"]:
+            data["loggers"][''] = data["loggers"][None]
+            del data["loggers"][None]
+        logging.config.dictConfig(data)
+
+def sync(args):
+    auth = (args.username, args.password)
+    api_root = args.api_root
+
+    academic_years = managers.AcademicYearManager(api_root, auth)
+    grades = managers.GradeManager(api_root, auth)
+    dorms = managers.DormManager(api_root, auth)
+    detention_offenses = managers.DetentionOffenseManager(api_root, auth)
+    detention_codes = managers.DetentionCodeManager(api_root, auth)
+
+    parents = managers.ParentManager(
+        api_root,
+        auth=auth,
+        ks_filename=args.families_file)
+
+    parents.sync()
+
+    students = managers.StudentManager(
+        api_root,
+        auth=auth,
+        ks_filename=args.student_file)
+
+    students.sync()
+
+    teachers = managers.TeacherManager(
+        api_root,
+        auth=auth,
+        ks_filename=args.teacher_file)
+
+    teachers.sync()
+
+    courses = managers.CourseManager(
+        api_root,
+        auth=auth,
+        ks_filename=args.course_file)
+
+    courses.sync()
+
+    sections = managers.SectionManager(
+        api_root,
+        auth,
+        ks_filename=args.section_file,
+        academic_year_manager=academic_years,
+        teacher_manager=teachers,
+        course_manager=courses)
+
+    sections.sync()
+
+    student_registrations = managers.StudentRegistrationManager(
+        api_root,
+        auth=auth,
+        ks_filename=args.student_registration_file,
+        academic_year_manager=academic_years,
+        section_manager=sections,
+        student_manager=students)
+
+    student_registrations.sync()
+
+    enrollments = managers.EnrollmentManager(
+        api_root,
+        auth=auth,
+        ks_filename=args.enrollments_file,
+        academic_year_manager=academic_years,
+        grade_manager=grades,
+        student_manager=students,
+        teacher_manager=teachers,
+        dorm_manager=dorms)
+
+    enrollments.sync()
+
+    detentions = managers.DetentionManager(
+        api_root,
+        auth,
+        ks_filename=args.detention_file,
+        academic_year_manager=academic_years,
+        offense_manager=detention_offenses,
+        code_manager=detention_codes,
+        student_manager=students,
+        teacher_manager=teachers)
+
+    detentions.sync()
+
+
+def get_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--families-file",
@@ -51,81 +158,17 @@ def main():
                         default=os.environ.get("ENROLLMENTS_FILE",
                                                "data/ksENROLLMENT.xml.json"))
 
-    
-
     parser.add_argument("--api-root", default=os.environ.get("API_ROOT"))
     parser.add_argument("--username",  default=os.environ.get("USERNAME"))
     parser.add_argument("--password",  default=os.environ.get("PASSWORD"))
+    
+    parser.add_argument("--logging-config",
+                        default=os.environ.get("LOGGING_CONFIG_FILE",
+                                               "logging_default.yml"))
 
     args = parser.parse_args()
 
-    auth = (args.username, args.password)
-    api_root = args.api_root
-
-    with pidfile.PidFile('running.pid'):
-        log.info("Pid lock acquired")
-
-        academic_years = AcademicYearManager(api_root, auth)
-        grades = GradeManager(api_root, auth)
-        dorms = DormManager(api_root, auth)
-        detention_offenses = DetentionOffenseManager(api_root, auth)
-        detention_codes = DetentionCodeManager(api_root, auth)
-
-        parents = ParentManager(api_root, auth=auth,
-                                ks_filename=args.families_file)
-        parents.sync()
-
-        students = StudentManager(api_root,
-                                  auth=auth,
-                                  ks_filename=args.student_file)
-        students.sync()
-
-        teachers = TeacherManager(api_root,
-                                  auth=auth,
-                                  ks_filename=args.teacher_file)
-        teachers.sync()
-
-        courses = CourseManager(api_root,
-                                auth=auth,
-                                ks_filename=args.course_file)
-        courses.sync()
-
-        sections = SectionManager(api_root,
-                                  auth,
-                                  ks_filename=args.section_file,
-                                  academic_year_manager=academic_years,
-                                  teacher_manager=teachers,
-                                  course_manager=courses)
-
-        sections.sync()
-
-        student_registrations = StudentRegistrationManager(api_root,
-                                                           auth=auth,
-                                                           ks_filename=args.student_registration_file,
-                                                           academic_year_manager=academic_years,
-                                                           section_manager=sections,
-                                                           student_manager=students)
-        student_registrations.sync()
-
-        enrollments = EnrollmentManager(api_root,
-                                        auth=auth,
-                                        ks_filename=args.enrollments_file,
-                                        academic_year_manager=academic_years,
-                                        grade_manager=grades,
-                                        student_manager=students,
-                                        teacher_manager=teachers,
-                                        dorm_manager=dorms,)
-        enrollments.sync()
-
-        detentions = DetentionManager(api_root,
-                                      auth,
-                                      ks_filename=args.detention_file,
-                                      academic_year_manager=academic_years,
-                                      offense_manager=detention_offenses,
-                                      code_manager=detention_codes,
-                                      student_manager=students,
-                                      teacher_manager=teachers,)
-        detentions.sync()
+    return args
 
 
 if __name__ == "__main__":

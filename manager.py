@@ -9,6 +9,7 @@ import urllib.parse
 
 import requests
 from tqdm import tqdm
+import chardet
 
 from single import run_once
 
@@ -115,7 +116,11 @@ class SyncManager(AppsManager):
 
         skip_count = 0
 
-        with open(self.ks_filename) as f_in:
+        with open(self.ks_filename, 'rb') as f_in:
+            encoding = chardet.detect(f_in.read())['encoding']
+
+
+        with open(self.ks_filename, encoding=encoding) as f_in:
             data = json.load(f_in)
 
             for i, record in enumerate(data["records"]):

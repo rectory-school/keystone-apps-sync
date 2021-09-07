@@ -6,8 +6,9 @@ import argparse
 import logging
 import logging.config
 import os
-import pidfile
+import sys
 
+import pidfile
 import yaml
 
 import managers
@@ -15,7 +16,7 @@ import managers
 log = logging.getLogger(__name__)
 
 
-def main():
+def main() -> int:
     """Main entrypoint"""
 
     args = get_args()
@@ -25,9 +26,13 @@ def main():
         log.info("Pid lock acquired")
         log.info("beginning sync")
 
-        sync(args)
-
-        log.info("sync finished")
+        try:
+            sync(args)
+            log.info("sync finished")
+            return 0
+        except Exception as exc:
+            log.exception("Sync finished with error: %s", exc)
+            return 1
 
 
 def configure_logging(args):
@@ -172,4 +177,8 @@ def get_args():
 
 
 if __name__ == "__main__":
-    main()
+    ret_code = main()
+    if ret_code != 0:
+        # This is mainly to make the debugger happier
+        sys.exit(ret_code)
+    

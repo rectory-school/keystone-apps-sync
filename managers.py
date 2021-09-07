@@ -24,7 +24,7 @@ class StudentManager(SyncManager):
     ]
 
     field_translations = {
-        'email': parsers.EmailParser(default_value='').parse,
+        'email': parsers.EmailParser(error_value='', empty_value='').parse,
     }
 
 
@@ -43,7 +43,7 @@ class TeacherManager(SyncManager):
     ]
 
     field_translations = {
-        'active': parsers.BooleanParse(default_value=False).parse,
+        'active': parsers.BooleanParse(error_value=False, empty_value=False).parse,
     }
 
 
@@ -95,7 +95,7 @@ class ParentManager(SyncManager):
                 out['parent_id'] = prefix
 
                 if 'email' in out:
-                    parser = parsers.EmailParser(default_value='')
+                    parser = parsers.EmailParser(error_value='', empty_value='')
                     out['email'] = parser.parse(out['email'].strip())
 
                 yield out
@@ -169,7 +169,7 @@ class EnrollmentManager(SyncManager):
             'academic_year': academic_year_manager.get_url_for_key,
             'student': student_manager.get_url_for_key,
             'advisor': teacher_manager.get_url_for_key,
-            'boarder': parsers.BoarderDayParser(default_value=False).parse,
+            'boarder': parsers.BoarderDayParser(error_value=False, empty_value=False).parse,
             'dorm': dorm_manager.get_url_for_key,
         }
 
@@ -283,10 +283,10 @@ class StudentRegistrationManager(SyncManager):
         """Overriding translate to get a multi-get section out of academic year and CSN"""
 
         if not 'IDSTUDENTREG' in ks_record:
-            raise MissingKey(ks_record)
+            raise MissingKey(ks_record, 'IDSTUDENTREG')
 
         if not ks_record['IDSTUDENTREG']:
-            raise MissingKeyValue(ks_record)
+            raise MissingKeyValue(ks_record, 'IDSTUDENTREG')
 
         section_lookup_record = {
             'academic_year': self.academic_year_manager.get_url_for_key(ks_record['AcademicYear']),
@@ -296,16 +296,21 @@ class StudentRegistrationManager(SyncManager):
         section_key = self.section_manager.get_key_value(section_lookup_record)
 
         section = self.section_manager.get_url_for_key(section_key)
+        if not section:
+            log.debug("Unable to find section for key %s", section_key)
+            raise MissingKeyValue(ks_record, 'section')
+
+        student = self.student_manager.get_url_for_key(ks_record['IDStudent'])
+        if not student:
+            log.debug("Unable to find student for %s", ks_record['IDStudent'])
+            raise MissingKeyValue(ks_record, 'student')
+
         out = {
             'student_reg_id': ks_record['IDSTUDENTREG'],
-            'student': self.student_manager.get_url_for_key(ks_record['IDStudent']),
+            'student': student,
             'section': section,
         }
 
-        if not out['student']:
-            raise MissingKeyValue(ks_record)
-
-        if not out['section']:
-            raise MissingKeyValue(ks_record)
+        
 
         return out

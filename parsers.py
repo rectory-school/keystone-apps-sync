@@ -11,8 +11,9 @@ log = logging.getLogger(__name__)
 class Parser(ABC):
     """Base parser that configures failure modes"""
 
-    def __init__(self, default_value: Any = Exception):
-        self.default_value = default_value
+    def __init__(self, error_value: Any = Exception, empty_value: Any=None):
+        self.error_value = error_value
+        self.empty_value = empty_value
 
     @abstractmethod
     def transform(self, val: Any) -> Any:
@@ -23,14 +24,20 @@ class Parser(ABC):
     def parse(self, val: Any) -> Any:
         """Call the transform and handle the errors"""
 
+        if val == '' or val == None:
+            if self.empty_value == Exception:
+                raise ValueError('Value was empty')
+            
+            return self.empty_value
+
         try:
             return self.transform(val)
         except ValueError as exc:
             log.debug("Could not transform value '%s': %s", val, exc)
-            if self.default_value == Exception:
+            if self.error_value == Exception:
                 raise exc
             
-            return self.default_value
+            return self.error_value
 
 class BooleanParse(Parser):
     """Transform a variety of boolean values into a bool"""
@@ -41,9 +48,6 @@ class BooleanParse(Parser):
         
         if val == False:
             return False
-        
-        if val == None:
-            raise ValueError("Value was none")
         
         if val.lower().strip() in {'yes', 'true', 't', '1'}:
             return True
@@ -57,9 +61,6 @@ class BoarderDayParser(Parser):
     """Transform B/D values into a boolean 'is_boarder'"""
 
     def transform(self, val: str) -> bool:
-        if not val:
-            raise ValueError("Boarder/day value was empty")
-        
         val = val.strip()
 
         if val == 'B':
@@ -89,9 +90,6 @@ class EmailParser(Parser):
         re.IGNORECASE)
 
     def transform(self, val: str) -> Any:
-        if not val:
-            raise ValueError('Email is empty')
-        
         # Clean up any whitespace
         val = val.strip()
 

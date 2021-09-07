@@ -42,10 +42,10 @@ class AppsManager:
         """Get the key to use for a given record"""
 
         if not self.key_name in record:
-            raise MissingKey(record)
+            raise MissingKey(record, self.key_name)
 
         if not record[self.key_name]:
-            raise MissingKeyValue(record)
+            raise MissingKeyValue(record, self.key_name)
 
         return record[self.key_name]
 
@@ -312,16 +312,25 @@ class InvalidRecord(Exception):
 class MissingKey(InvalidRecord):
     """Indicates the key field is missing"""
 
+    def __init__(self, record: Dict[str, Any], field_name: str = None):
+        super().__init__(record)
+        self.field_name = field_name
+
     def __str__(self):
+        if self.field_name:
+            return f"Key field '{self.field_name}' self.is missing"
+        
         return "Key field is missing"
 
 
-class MissingKeyValue(InvalidRecord):
+class MissingKeyValue(MissingKey):
     """Indicates the key value is missing"""
 
     def __str__(self):
-        return "Key value is missing"
-
+        if self.field_name:
+            return f"Key value for '{self.field_name}' self.is missing"
+        
+        return "Key value for is missing"
 
 class MissingRequiredValue(InvalidRecord):
     def __init__(self, record: Dict[str, Any], key: str):

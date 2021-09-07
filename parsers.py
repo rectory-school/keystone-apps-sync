@@ -26,6 +26,7 @@ class Parser(ABC):
         try:
             return self.transform(val)
         except ValueError as exc:
+            log.debug("Could not transform value '%s': %s", val, exc)
             if self.default_value == Exception:
                 raise exc
             

@@ -122,9 +122,9 @@ class SyncManager(AppsManager):
                         
                             self.ks_data[key] = translated
                         except InvalidRecord as exc:
-                            log.error("Unable to load Keystone record %d subrecord %d: %s", i, j, exc.record)
+                            log.error("Unable to load Keystone record %d subrecord %d: %s (%s)", i, j, exc, exc.record)
                 except InvalidRecord as exc:
-                    log.error("Unable to load Keystone record %d: %s", i, exc.record)
+                    log.error("Unable to load Keystone record %d: %s (%s)", i, exc, exc.record)
 
     
 

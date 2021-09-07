@@ -118,7 +118,7 @@ class SyncManager(AppsManager):
 
         with open(self.ks_filename, 'rb') as f_in:
             encoding = chardet.detect(f_in.read())['encoding']
-
+            log.debug("Encoding is '%s'", encoding)
 
         with open(self.ks_filename, encoding=encoding) as f_in:
             data = json.load(f_in)

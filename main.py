@@ -19,6 +19,10 @@ def main():
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("--families-file",
+                        default=os.environ.get("FAMILIES_FILE",
+                                               "data/ptFAMILIES.xml.json"))
+
     parser.add_argument("--student-file",
                         default=os.environ.get("STUDENT_FILE",
                                                "data/ksPERMRECS.xml.json"))
@@ -47,9 +51,7 @@ def main():
                         default=os.environ.get("ENROLLMENTS_FILE",
                                                "data/ksENROLLMENT.xml.json"))
 
-    parser.add_argument("--families-file",
-                        default=os.environ.get("FAMILIES_FILE",
-                                               "data/ptFAMILIES.xml.json"))
+    
 
     parser.add_argument("--api-root", default=os.environ.get("API_ROOT"))
     parser.add_argument("--username",  default=os.environ.get("USERNAME"))
@@ -68,6 +70,10 @@ def main():
         dorms = DormManager(api_root, auth)
         detention_offenses = DetentionOffenseManager(api_root, auth)
         detention_codes = DetentionCodeManager(api_root, auth)
+
+        parents = ParentManager(api_root, auth=auth,
+                                ks_filename=args.families_file)
+        parents.sync()
 
         students = StudentManager(api_root,
                                   auth=auth,
@@ -110,10 +116,6 @@ def main():
                                         teacher_manager=teachers,
                                         dorm_manager=dorms,)
         enrollments.sync()
-
-        parents = ParentManager(api_root, auth=auth,
-                                ks_filename=args.families_file)
-        parents.sync()
 
         detentions = DetentionManager(api_root,
                                       auth,

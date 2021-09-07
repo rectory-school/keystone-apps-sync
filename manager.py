@@ -231,9 +231,10 @@ class SyncManager(AppsManager):
         self.load_ks_data()
         self.load_apps_data()
 
+        self.delete()
         self.create()
         self.update()
-        self.delete()
+        
 
 
 class GetOrCreateManager(AppsManager):
@@ -294,3 +295,4 @@ class MissingRequiredValue(InvalidRecord):
     
     def __str__(self):
         return f"Missing key '{self.key}'"
+        

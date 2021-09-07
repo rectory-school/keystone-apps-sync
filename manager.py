@@ -161,7 +161,7 @@ class SyncManager(AppsManager):
 
             resp = self.session.delete(url)
             resp.raise_for_status()
-            log.info("Deleted %s", url)
+            log.debug("Deleted %s", url)
 
     @run_once
     def create(self):

@@ -1,12 +1,11 @@
 """Base manager"""
 
 import time
-from typing import Hashable, List, Tuple, Dict, Any, Callable, Iterable, Optional
-from functools import cache, wraps
+from typing import Any, List, Tuple, Dict, Iterable, Hashable, Callable, Optional
+from functools import cache
 import logging
 import json
 import urllib.parse
-from urllib.parse import urlencode
 
 import requests
 from tqdm import tqdm
@@ -70,7 +69,7 @@ class AppsManager:
         url_parts = list(urllib.parse.urlparse(url))
         query = dict(urllib.parse.parse_qsl(url_parts[4]))
         query.update({'page_size': 5000})
-        url_parts[4] = urlencode(query)
+        url_parts[4] = urllib.parse.urlencode(query)
         url = urllib.parse.urlunparse(url_parts)
 
         while url:

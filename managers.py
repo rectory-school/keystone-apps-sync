@@ -82,15 +82,15 @@ class ParentManager(SyncManager):
             out = {}
 
             for apps_attr, ks_attr in self.subvalue_map.items():
-                value = ks_record[prefix + "_" + ks_attr]
+                value = ks_record[prefix + "_" + ks_attr].strip()
                 if value:
                     out[apps_attr] = value
 
             # We had at least one value in this parent
             if out:
                 out['family_id'] = ks_record['IDFAMILY']
-                out['address'] = ks_record['P_address_full']
-                out['phone_home'] = ks_record["P_phone_H"]
+                out['address'] = ks_record['P_address_full'].strip()
+                out['phone_home'] = ks_record["P_phone_H"].strip()
                 out['parent_id'] = prefix
 
                 if 'email' in out:
@@ -105,8 +105,8 @@ class ParentManager(SyncManager):
             yield {
                 'family_id': ks_record['IDFAMILY'],
                 'parent_id': 'Pa',
-                'address': ks_record['P_address_full'],
-                'phone_home': ks_record["P_phone_H"],
+                'address': ks_record['P_address_full'].strip(),
+                'phone_home': ks_record["P_phone_H"].strip(),
             }
 
     def get_key_value(self, record: Dict[str, Any]) -> Hashable:

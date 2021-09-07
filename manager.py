@@ -8,6 +8,7 @@ import urllib.parse
 from urllib.parse import urlencode
 
 import requests
+from tqdm import tqdm
 
 from single import run_once
 
@@ -67,10 +68,11 @@ class AppsManager:
         while url:
             log.debug("Loading %s, %d records already loaded", url, len(self.apps_data))
 
-            resp = self.session.get(url).json()
-            url = resp["next"]
+            resp = self.session.get(url)
+            data = resp.json()
+            url = data["next"]
 
-            for record in resp["results"]:
+            for record in data["results"]:
                 key = self.get_key_value(record)
                 
                 # We're only storing the URLs here
@@ -124,7 +126,7 @@ class SyncManager(AppsManager):
 
         to_delete = self.apps_data.keys() - self.ks_data.keys()
 
-        for key in to_delete:
+        for key in tqdm(to_delete):
             record = self.apps_data[key]
             url = record["url"]
 
@@ -141,7 +143,7 @@ class SyncManager(AppsManager):
 
         log.info("Creating %d new records", len(to_create))
 
-        for key in to_create:
+        for key in tqdm(to_create):
             desired_record = self.ks_data[key]
             resp = self.session.post(self.url, json=desired_record)
             data = resp.json()
@@ -170,21 +172,24 @@ class SyncManager(AppsManager):
         self.load_ks_data()
 
         update_candidates = self.ks_data.keys() & self.apps_data.keys()
-        update_count = 0
 
+        to_update = set()
 
         for key in update_candidates:
             current_record = self.apps_data[key]
             desired_record = self.ks_data[key]
 
             if should_update(desired_record, current_record):
-                update_count += 1
-                url = current_record["url"]
-                resp = self.session.put(url, json=desired_record)
-                resp.raise_for_status()
-                log.debug("Updated %s", url)
+                to_update.add(key)
+        
+        for key in tqdm(o_update):
+            desired_record = self.ks_data[key]
+            url = current_record["url"]
+            resp = self.session.put(url, json=desired_record)
+            resp.raise_for_status()
+            log.debug("Updated %s", url)
 
-        log.info("Updated %d records", update_count)
+        log.info("Updated %d records", len(to_update))
 
     def split(self, ks_record: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         """Split a single incoming record into one or more translated outgoing records"""

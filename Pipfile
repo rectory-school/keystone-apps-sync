@@ -7,6 +7,7 @@ name = "pypi"
 requests = "*"
 django = "*"
 pidfile = "*"
+tqdm = "*"
 
 [dev-packages]
 pylint = "*"

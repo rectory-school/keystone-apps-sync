@@ -8,7 +8,6 @@ import logging.config
 import os
 import sys
 
-import portalocker
 import yaml
 
 import managers
@@ -22,17 +21,16 @@ def main() -> int:
     args = get_args()
     configure_logging(args)
     
-    with portalocker.Lock('running.pid'):
-        log.info("Pid lock acquired")
-        log.info("beginning sync")
+    log.info("beginning sync")
 
-        try:
-            sync(args)
-            log.info("sync finished")
-            return 0
-        except Exception as exc:
-            log.exception("Sync finished with error: %s", exc)
-            return 1
+    # TODO: Add a portable pid file check back in
+    try:
+        sync(args)
+        log.info("sync finished")
+        return 0
+    except Exception as exc:
+        log.exception("Sync finished with error: %s", exc)
+        return 1
 
 
 def configure_logging(args):

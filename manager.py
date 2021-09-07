@@ -130,7 +130,9 @@ class SyncManager(AppsManager):
         self.load_ks_data()
 
         to_delete = self.apps_data.keys() - self.ks_data.keys()
-
+        
+        log.info("Deleting %d records", len(to_delete))
+        
         for key in tqdm(to_delete):
             record = self.apps_data[key]
             url = record["url"]
@@ -187,6 +189,8 @@ class SyncManager(AppsManager):
             if should_update(desired_record, current_record):
                 to_update.add(key)
         
+        log.info("Updating %d records", len(to_update))
+
         for key in tqdm(to_update):
             desired_record = self.ks_data[key]
             current_record = self.apps_data[key]

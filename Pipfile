@@ -9,6 +9,7 @@ tqdm = "*"
 pyyaml = "*"
 chardet = "*"
 logzio-python-handler = "*"
+humanize = "*"
 
 [dev-packages]
 pylint = "*"

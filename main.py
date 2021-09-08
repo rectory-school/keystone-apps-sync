@@ -10,6 +10,7 @@ import sys
 from datetime import datetime
 
 import yaml
+import humanize
 
 import managers
 
@@ -180,7 +181,7 @@ if __name__ == "__main__":
     started_at = datetime.now()
     ret_code = main()
     delta = datetime.now() - started_at
-    log.info("Sync process exiting with return code %d in %0.2f seconds", ret_code, delta.total_seconds(), extra={'return-code': ret_code, 'run-time': delta.total_seconds()})
+    log.info("Sync process exiting with return code %d in %s", ret_code, humanize.naturaldelta(delta), extra={'return-code': ret_code, 'run-time': delta.total_seconds()})
 
     if ret_code != 0:
         # This is mainly to make the debugger happier

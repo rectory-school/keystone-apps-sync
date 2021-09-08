@@ -3,3 +3,6 @@ data/
 .env
 running.pid
 *.log
+.venv/
+fmpxml-to-json
+fmpxml-to-json.exe

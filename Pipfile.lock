@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "29751925f57b055e8864aceed11fd3e25499a06f50992f1b6c45ece4373f4925"
+            "sha256": "db4376861f9150d4b9dceef2104958ec566ecc919a5abe80665b586c30fd0fb2"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -46,6 +46,13 @@
             ],
             "markers": "python_version >= '3'",
             "version": "==3.2"
+        },
+        "logzio-python-handler": {
+            "hashes": [
+                "sha256:5dfbd66b8b6a1bac82c3506d3bc809b89df4059b5336310c99cf45da3888a11e"
+            ],
+            "index": "pypi",
+            "version": "==3.0.0"
         },
         "pyyaml": {
             "hashes": [

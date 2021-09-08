@@ -8,6 +8,7 @@ requests = "*"
 tqdm = "*"
 pyyaml = "*"
 chardet = "*"
+logzio-python-handler = "*"
 
 [dev-packages]
 pylint = "*"
